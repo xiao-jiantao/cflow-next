@@ -18,80 +18,182 @@ export default function Home() {
     },
   ]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
       content: input,
     };
-
-    const aiMsg: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: `收到你的消息："${input}"。AI 功能即将接入，敬请期待。`,
-    };
-
-    setMessages((prev) => [...prev, userMsg, aiMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setLoading(true);
+
+    try {
+      const chatHistory = [...messages, userMsg]
+        .filter((m) => m.id !== "welcome")
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: chatHistory }),
+      });
+
+      const data = await res.json();
+      const aiMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.reply || "抱歉，出了点问题，请稍后再试。",
+      };
+      setMessages((prev) => [...prev, aiMsg]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "网络错误，请检查连接后重试。",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* 左侧面板 */}
-      <aside className="w-64 bg-white border-r border-gray-200 p-4">
-        <h1 className="text-xl font-bold text-gray-800 mb-6">cFlow AI</h1>
-        <nav className="space-y-2">
-          <a href="#" className="block px-3 py-2 rounded-lg bg-blue-50
-            text-blue-700 font-medium">AI 对话</a>
-          <a href="#" className="block px-3 py-2 rounded-lg text-gray-600
-            hover:bg-gray-100">知识库</a>
-          <a href="#" className="block px-3 py-2 rounded-lg text-gray-600
-            hover:bg-gray-100">流程看板</a>
+    <div style={{ display: "flex", height: "100vh", fontFamily: "sans-serif" }}>
+      {/* 左侧导航 */}
+      <aside
+        style={{
+          width: 240,
+          backgroundColor: "#fff",
+          borderRight: "1px solid #e5e7eb",
+          padding: 20,
+        }}
+      >
+        <h1 style={{ fontSize: 22, fontWeight: "bold", marginBottom: 24 }}>
+          cFlow AI
+        </h1>
+        <nav>
+          {["AI 对话", "知识库", "流程看板"].map((item, i) => (
+            <div
+              key={item}
+              style={{
+                padding: "8px 12px",
+                marginBottom: 4,
+                borderRadius: 8,
+                backgroundColor: i === 0 ? "#eff6ff" : "transparent",
+                color: i === 0 ? "#1d4ed8" : "#4b5563",
+                cursor: "pointer",
+                fontWeight: i === 0 ? 600 : 400,
+              }}
+            >
+              {item}
+            </div>
+          ))}
         </nav>
       </aside>
 
-      {/* 主区域：对话 */}
-      <main className="flex-1 flex flex-col">
+      {/* 主区域 */}
+      <main
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          backgroundColor: "#f9fafb",
+        }}
+      >
         {/* 消息列表 */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              style={{
+                display: "flex",
+                justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                marginBottom: 16,
+              }}
             >
               <div
-                className={`max-w-[70%] px-4 py-3 rounded-2xl ${
-                  msg.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-gray-200 text-gray-800"
-                }`}
+                style={{
+                  maxWidth: "70%",
+                  padding: "12px 16px",
+                  borderRadius: 16,
+                  backgroundColor: msg.role === "user" ? "#2563eb" : "#fff",
+                  color: msg.role === "user" ? "#fff" : "#1f2937",
+                  border:
+                    msg.role === "assistant" ? "1px solid #e5e7eb" : "none",
+                  lineHeight: 1.6,
+                  whiteSpace: "pre-wrap",
+                }}
               >
                 {msg.content}
               </div>
             </div>
           ))}
+          {loading && (
+            <div style={{ display: "flex", justifyContent: "flex-start" }}>
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: 16,
+                  backgroundColor: "#fff",
+                  border: "1px solid #e5e7eb",
+                  color: "#9ca3af",
+                }}
+              >
+                思考中...
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 输入框 */}
-        <form onSubmit={handleSubmit} className="border-t border-gray-200 p-4">
-          <div className="flex gap-3 max-w-3xl mx-auto">
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            borderTop: "1px solid #e5e7eb",
+            padding: 16,
+            backgroundColor: "#fff",
+          }}
+        >
+          <div
+            style={{ display: "flex", gap: 12, maxWidth: 700, margin: "0 auto" }}
+          >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="输入消息，例如：帮我查一下预仿真的SOP..."
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-xl
-                focus:outline-none focus:ring-2 focus:ring-blue-500
-                focus:border-transparent"
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: "12px 16px",
+                border: "1px solid #d1d5db",
+                borderRadius: 12,
+                fontSize: 14,
+                outline: "none",
+                opacity: loading ? 0.6 : 1,
+              }}
             />
             <button
               type="submit"
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl
-                hover:bg-blue-700 transition-colors font-medium"
+              disabled={loading}
+              style={{
+                padding: "12px 24px",
+                backgroundColor: loading ? "#93c5fd" : "#2563eb",
+                color: "#fff",
+                border: "none",
+                borderRadius: 12,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+              }}
             >
               发送
             </button>
