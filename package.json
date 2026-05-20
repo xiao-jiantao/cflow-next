@@ -1,0 +1,11 @@
+{
+  "name": "cflow-next",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @cflow/web dev",
+    "build": "pnpm --filter @cflow/web build"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
