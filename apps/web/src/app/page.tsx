@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Message {
   id: string;
@@ -8,17 +8,30 @@ interface Message {
   content: string;
 }
 
+const WELCOME_MSG: Message = {
+  id: "welcome",
+  role: "assistant",
+  content:
+    "你好！我是 cFlow AI 助手，可以帮你管理设计流程、查询知识文档。有什么可以帮你的？",
+};
+
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content:
-        "你好！我是 cFlow AI 助手，可以帮你管理设计流程、查询知识文档。有什么可以帮你的？",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MSG]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("cflow-chat-history");
+    if (saved) {
+      try { setMessages(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (messages.length > 1 || messages[0]?.id !== "welcome") {
+      localStorage.setItem("cflow-chat-history", JSON.stringify(messages));
+    }
+  }, [messages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
