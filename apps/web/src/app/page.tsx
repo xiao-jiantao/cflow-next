@@ -80,21 +80,28 @@ export default function Home() {
           cFlow AI
         </h1>
         <nav>
-          {["AI 对话", "知识库", "流程看板"].map((item, i) => (
-            <div
-              key={item}
+          {[
+            { name: "AI 对话", href: "/" },
+            { name: "知识库", href: "/knowledge" },
+            { name: "流程看板", href: "#" },
+          ].map((item, i) => (
+            <a
+              key={item.name}
+              href={item.href}
               style={{
+                display: "block",
                 padding: "8px 12px",
                 marginBottom: 4,
                 borderRadius: 8,
+                textDecoration: "none",
                 backgroundColor: i === 0 ? "#eff6ff" : "transparent",
                 color: i === 0 ? "#1d4ed8" : "#4b5563",
                 cursor: "pointer",
                 fontWeight: i === 0 ? 600 : 400,
               }}
             >
-              {item}
-            </div>
+              {item.name}
+            </a>
           ))}
         </nav>
       </aside>
