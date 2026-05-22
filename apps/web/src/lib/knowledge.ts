@@ -1,4 +1,6 @@
 import { getEmbedding, cosineSimilarity } from "./embedding";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import path from "path";
 
 export interface DocChunk {
   id: string;
@@ -7,21 +9,39 @@ export interface DocChunk {
   embedding: number[];
 }
 
+const DOCS_DIR = path.join(process.cwd(), "../../docs");
+const VECTORS_FILE = path.join(DOCS_DIR, "vectors.json");
+
 // 内存存储（后期可切换到 pgvector）
 let chunks: DocChunk[] = [];
+let loaded = false;
+
+function loadFromDisk() {
+  if (loaded) return;
+  loaded = true;
+  if (!existsSync(VECTORS_FILE)) return;
+  try {
+    const data = readFileSync(VECTORS_FILE, "utf-8");
+    chunks = JSON.parse(data);
+  } catch { /* 文件损坏则从空开始 */ }
+}
+
+function saveToDisk() {
+  mkdirSync(DOCS_DIR, { recursive: true });
+  writeFileSync(VECTORS_FILE, JSON.stringify(chunks), "utf-8");
+}
 
 export function splitIntoChunks(text: string, chunkSize = 500, overlap = 50): string[] {
-  const paragraphs = text.split(/\n{2,}/);
+  const lines = text.split(/\n/);
   const result: string[] = [];
   let current = "";
 
-  for (const para of paragraphs) {
-    if ((current + para).length > chunkSize && current.length > 0) {
+  for (const line of lines) {
+    if ((current + line).length > chunkSize && current.length > 0) {
       result.push(current.trim());
-      const words = current.split("");
-      current = words.slice(-overlap).join("") + "\n\n" + para;
+      current = current.slice(-overlap) + "\n" + line;
     } else {
-      current += (current ? "\n\n" : "") + para;
+      current += (current ? "\n" : "") + line;
     }
   }
   if (current.trim()) {
@@ -31,6 +51,7 @@ export function splitIntoChunks(text: string, chunkSize = 500, overlap = 50): st
 }
 
 export async function indexDocument(docName: string, content: string) {
+  loadFromDisk();
   // 移除同名旧文档
   chunks = chunks.filter((c) => c.docName !== docName);
 
@@ -52,6 +73,7 @@ export async function indexDocument(docName: string, content: string) {
       });
     }
   }
+  saveToDisk();
   return textChunks.length;
 }
 
@@ -59,6 +81,7 @@ export async function searchDocuments(
   query: string,
   topK = 3
 ): Promise<{ content: string; docName: string; score: number }[]> {
+  loadFromDisk();
   if (chunks.length === 0) return [];
 
   const [queryEmbedding] = await getEmbedding([query]);
@@ -74,6 +97,7 @@ export async function searchDocuments(
 }
 
 export function getIndexedDocs(): { name: string; chunkCount: number }[] {
+  loadFromDisk();
   const docMap = new Map<string, number>();
   for (const chunk of chunks) {
     docMap.set(chunk.docName, (docMap.get(chunk.docName) || 0) + 1);
@@ -85,5 +109,12 @@ export function getIndexedDocs(): { name: string; chunkCount: number }[] {
 }
 
 export function getTotalChunks(): number {
+  loadFromDisk();
   return chunks.length;
+}
+
+export function removeDocument(docName: string) {
+  loadFromDisk();
+  chunks = chunks.filter((c) => c.docName !== docName);
+  saveToDisk();
 }

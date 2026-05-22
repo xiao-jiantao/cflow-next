@@ -3,7 +3,7 @@ import { execSync } from "child_process";
 import { writeFileSync, mkdirSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
-import { indexDocument, getIndexedDocs } from "@/lib/knowledge";
+import { indexDocument, getIndexedDocs, removeDocument } from "@/lib/knowledge";
 
 const DOCS_DIR = path.join(process.cwd(), "../../docs");
 
@@ -70,4 +70,15 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   const docs = getIndexedDocs();
   return Response.json({ docs });
+}
+
+export async function DELETE(request: NextRequest) {
+  const { name } = await request.json();
+  if (!name) {
+    return Response.json({ error: "缺少文档名称" }, { status: 400 });
+  }
+  removeDocument(name);
+  const mdPath = path.join(DOCS_DIR, name);
+  tryDelete(mdPath);
+  return Response.json({ success: true });
 }

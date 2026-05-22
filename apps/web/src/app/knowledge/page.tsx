@@ -47,6 +47,20 @@ export default function KnowledgePage() {
     }
   };
 
+  const handleDelete = async (docName: string) => {
+    if (!confirm(`确定删除「${docName}」？删除后不可恢复。`)) return;
+    try {
+      await fetch("/api/docs", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: docName }),
+      });
+      fetchDocs();
+    } catch {
+      setMessage("删除失败，请重试");
+    }
+  };
+
   return (
     <div style={{ display: "flex", height: "100vh", fontFamily: "sans-serif" }}>
       <aside
@@ -134,6 +148,7 @@ export default function KnowledgePage() {
                 <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
                   <th style={{ textAlign: "left", padding: 8 }}>文档名称</th>
                   <th style={{ textAlign: "left", padding: 8 }}>片段数</th>
+                  <th style={{ textAlign: "right", padding: 8 }}>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -142,6 +157,19 @@ export default function KnowledgePage() {
                     <td style={{ padding: 8 }}>{doc.name}</td>
                     <td style={{ padding: 8, color: "#6b7280" }}>
                       {doc.chunkCount} 个片段
+                    </td>
+                    <td style={{ padding: 8, textAlign: "right" }}>
+                      <button
+                        onClick={() => handleDelete(doc.name)}
+                        style={{
+                          padding: "4px 12px", fontSize: 13,
+                          color: "#dc2626", backgroundColor: "transparent",
+                          border: "1px solid #fca5a5", borderRadius: 6,
+                          cursor: "pointer",
+                        }}
+                      >
+                        删除
+                      </button>
                     </td>
                   </tr>
                 ))}
