@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface Message {
   id: string;
@@ -19,6 +19,48 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MSG]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [currentTurn, setCurrentTurn] = useState(-1);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setCurrentTurn(-1);
+  };
+
+  const getUserMsgIndices = () => {
+    return messages.reduce<number[]>((acc, msg, i) => {
+      if (msg.role === "user") acc.push(i);
+      return acc;
+    }, []);
+  };
+
+  const jumpToTurn = (direction: "prev" | "next") => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const indices = getUserMsgIndices();
+    if (indices.length === 0) return;
+
+    let target: number;
+    if (currentTurn === -1) {
+      target = direction === "prev" ? indices.length - 1 : 0;
+    } else {
+      target = direction === "prev" ? currentTurn - 1 : currentTurn + 1;
+    }
+
+    if (target < 0) target = 0;
+    if (target >= indices.length) {
+      scrollToBottom();
+      return;
+    }
+
+    setCurrentTurn(target);
+    const msgElements = container.querySelectorAll("[data-msg-index]");
+    const el = msgElements[indices[target]] as HTMLElement;
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem("cflow-chat-history");
@@ -31,6 +73,7 @@ export default function Home() {
     if (messages.length > 1 || messages[0]?.id !== "welcome") {
       localStorage.setItem("cflow-chat-history", JSON.stringify(messages));
     }
+    scrollToBottom();
   }, [messages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,14 +172,25 @@ export default function Home() {
         }}
       >
         {/* 消息列表 */}
-        <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
-          {messages.map((msg) => (
+        <div ref={chatContainerRef} style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+          {messages.map((msg, idx) => (
             <div
               key={msg.id}
+              data-msg-index={idx}
+              onClick={() => {
+                const indices = getUserMsgIndices();
+                if (msg.role === "user") {
+                  setCurrentTurn(indices.indexOf(idx));
+                } else {
+                  const turn = indices.findIndex((ui) => ui > idx) - 1;
+                  setCurrentTurn(turn >= 0 ? turn : indices.length - 1);
+                }
+              }}
               style={{
                 display: "flex",
                 justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
                 marginBottom: 16,
+                cursor: "pointer",
               }}
             >
               <div
@@ -171,6 +225,20 @@ export default function Home() {
               </div>
             </div>
           )}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* 对话轮次导航 */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, padding: "6px 0", borderTop: "1px solid #f3f4f6" }}>
+          <button onClick={() => jumpToTurn("prev")} title="上一轮对话" style={{ padding: "4px 14px", fontSize: 13, border: "1px solid #d1d5db", borderRadius: 6, backgroundColor: "#fff", cursor: "pointer", color: "#4b5563" }}>
+            &#9650; 上一轮
+          </button>
+          <button onClick={() => jumpToTurn("next")} title="下一轮对话" style={{ padding: "4px 14px", fontSize: 13, border: "1px solid #d1d5db", borderRadius: 6, backgroundColor: "#fff", cursor: "pointer", color: "#4b5563" }}>
+            &#9660; 下一轮
+          </button>
+          <button onClick={scrollToBottom} title="回到最新" style={{ padding: "4px 14px", fontSize: 13, border: "1px solid #d1d5db", borderRadius: 6, backgroundColor: "#fff", cursor: "pointer", color: "#4b5563" }}>
+            &#8595; 最新
+          </button>
         </div>
 
         {/* 输入框 */}
