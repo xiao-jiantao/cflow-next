@@ -77,6 +77,7 @@ export default function KnowledgePage() {
             { name: "AI 对话", href: "/" },
             { name: "知识库", href: "/knowledge" },
             { name: "流程看板", href: "#" },
+            { name: "使用手册", href: "/manual" },
           ].map((item, i) => (
             <a
               key={item.name}
