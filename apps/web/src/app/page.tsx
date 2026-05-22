@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+}
+
+interface Session {
+  id: string;
+  title: string;
+  messages: Message[];
 }
 
 const WELCOME_MSG: Message = {
@@ -15,16 +21,82 @@ const WELCOME_MSG: Message = {
     "你好！我是 cFlow AI 助手，可以帮你管理设计流程、查询知识文档。有什么可以帮你的？",
 };
 
+function createSession(): Session {
+  return { id: Date.now().toString(), title: "新对话", messages: [WELCOME_MSG] };
+}
+
+const STORAGE_KEY = "cflow-sessions";
+
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MSG]);
+  const [sessions, setSessions] = useState<Session[]>([createSession()]);
+  const [activeId, setActiveId] = useState<string>("");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentTurn, setCurrentTurn] = useState(-1);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed: Session[] = JSON.parse(saved);
+        if (parsed.length > 0) {
+          setSessions(parsed);
+          setActiveId(parsed[parsed.length - 1].id);
+          return;
+        }
+      } catch { /* ignore */ }
+    }
+    // 迁移旧格式数据
+    const oldData = localStorage.getItem("cflow-chat-history");
+    if (oldData) {
+      try {
+        const oldMsgs: Message[] = JSON.parse(oldData);
+        if (oldMsgs.length > 0) {
+          const migrated: Session = {
+            id: "migrated",
+            title: oldMsgs.find((m) => m.role === "user")?.content.slice(0, 20) || "历史对话",
+            messages: oldMsgs,
+          };
+          setSessions([migrated]);
+          setActiveId(migrated.id);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify([migrated]));
+          localStorage.removeItem("cflow-chat-history");
+          return;
+        }
+      } catch { /* ignore */ }
+    }
+    const first = createSession();
+    setSessions([first]);
+    setActiveId(first.id);
+  }, []);
+
+  const active = sessions.find((s) => s.id === activeId) || sessions[0];
+  const messages = active?.messages || [WELCOME_MSG];
+
+  const saveSessions = useCallback((updated: Session[]) => {
+    setSessions(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  }, []);
+
+  const setMessages = (updater: Message[] | ((prev: Message[]) => Message[])) => {
+    setSessions((prev) => {
+      const next = prev.map((s) => {
+        if (s.id !== activeId) return s;
+        const newMsgs = typeof updater === "function" ? updater(s.messages) : updater;
+        const title = newMsgs.find((m) => m.role === "user")?.content.slice(0, 20) || s.title;
+        return { ...s, messages: newMsgs, title };
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
   const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     setCurrentTurn(-1);
   };
 
@@ -47,34 +119,44 @@ export default function Home() {
     } else {
       target = direction === "prev" ? currentTurn - 1 : currentTurn + 1;
     }
-
     if (target < 0) target = 0;
-    if (target >= indices.length) {
-      scrollToBottom();
-      return;
-    }
+    if (target >= indices.length) { scrollToBottom(); return; }
 
     setCurrentTurn(target);
     const msgElements = container.querySelectorAll("[data-msg-index]");
     const el = msgElements[indices[target]] as HTMLElement;
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  useEffect(() => { scrollToBottom(); }, [activeId, messages.length]);
+
+  const handleNewSession = () => {
+    const s = createSession();
+    const updated = [...sessions, s];
+    saveSessions(updated);
+    setActiveId(s.id);
+  };
+
+  const handleDeleteSession = (id: string) => {
+    const updated = sessions.filter((s) => s.id !== id);
+    if (updated.length === 0) {
+      const s = createSession();
+      saveSessions([s]);
+      setActiveId(s.id);
+    } else {
+      saveSessions(updated);
+      if (activeId === id) setActiveId(updated[updated.length - 1].id);
     }
   };
 
-  useEffect(() => {
-    const saved = localStorage.getItem("cflow-chat-history");
-    if (saved) {
-      try { setMessages(JSON.parse(saved)); } catch { /* ignore */ }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (messages.length > 1 || messages[0]?.id !== "welcome") {
-      localStorage.setItem("cflow-chat-history", JSON.stringify(messages));
-    }
-    scrollToBottom();
-  }, [messages]);
+  const handleRenameSession = (id: string) => {
+    if (!editTitle.trim()) { setEditingId(null); return; }
+    const updated = sessions.map((s) =>
+      s.id === id ? { ...s, title: editTitle.trim() } : s
+    );
+    saveSessions(updated);
+    setEditingId(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,6 +212,8 @@ export default function Home() {
           backgroundColor: "#fff",
           borderRight: "1px solid #e5e7eb",
           padding: 20,
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <h1 style={{ fontSize: 22, fontWeight: "bold", marginBottom: 24 }}>
@@ -161,6 +245,62 @@ export default function Home() {
             </a>
           ))}
         </nav>
+
+        {/* 会话列表 */}
+        <div style={{ marginTop: 20, borderTop: "1px solid #e5e7eb", paddingTop: 16, flex: 1, overflowY: "auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 13, color: "#6b7280", fontWeight: 600 }}>对话记录</span>
+            <button onClick={handleNewSession} style={{ fontSize: 12, padding: "2px 8px", border: "1px solid #d1d5db", borderRadius: 4, backgroundColor: "#fff", cursor: "pointer" }}>
+              + 新建
+            </button>
+          </div>
+          {[...sessions].reverse().map((s) => (
+            <div
+              key={s.id}
+              onClick={() => setActiveId(s.id)}
+              style={{
+                padding: "6px 10px",
+                marginBottom: 2,
+                borderRadius: 6,
+                fontSize: 13,
+                cursor: "pointer",
+                backgroundColor: s.id === activeId ? "#eff6ff" : "transparent",
+                color: s.id === activeId ? "#1d4ed8" : "#4b5563",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              {editingId === s.id ? (
+                <input
+                  autoFocus
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onBlur={() => handleRenameSession(s.id)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleRenameSession(s.id); if (e.key === "Escape") setEditingId(null); }}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ flex: 1, fontSize: 13, border: "1px solid #93c5fd", borderRadius: 4, padding: "2px 4px", outline: "none" }}
+                />
+              ) : (
+                <span
+                  onDoubleClick={(e) => { e.stopPropagation(); setEditingId(s.id); setEditTitle(s.title); }}
+                  style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}
+                >
+                  {s.title}
+                </span>
+              )}
+              {sessions.length > 1 && editingId !== s.id && (
+                <span
+                  onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }}
+                  style={{ color: "#d1d5db", cursor: "pointer", marginLeft: 4, fontSize: 14 }}
+                  title="删除会话"
+                >
+                  x
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
       </aside>
 
       {/* 主区域 */}

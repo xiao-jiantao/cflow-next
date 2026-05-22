@@ -30,6 +30,15 @@ export default function ManualPage() {
             <li>点击任意消息气泡可锚定当前位置，后续导航从此处开始</li>
             <li>新消息到达时自动滚动到底部</li>
           </ul>
+          <h4 style={{ marginTop: 12, fontWeight: 600 }}>多会话管理</h4>
+          <ul style={{ paddingLeft: 20 }}>
+            <li>左侧"对话记录"区域显示所有历史会话</li>
+            <li>点击 <K>+ 新建</K> 创建新对话</li>
+            <li>点击会话名称切换到该对话</li>
+            <li>双击会话名称可重命名</li>
+            <li>点击会话右侧 <K>x</K> 删除该对话</li>
+            <li>会话标题自动取第一条提问的前 20 个字</li>
+          </ul>
         </>
       ),
     },
