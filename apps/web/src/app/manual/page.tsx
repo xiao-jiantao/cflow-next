@@ -19,9 +19,23 @@ export default function ManualPage() {
           <h4 style={{ marginTop: 12, fontWeight: 600 }}>基本操作</h4>
           <ul style={{ paddingLeft: 20 }}>
             <li>在底部输入框输入问题，点击 <K>发送</K> 或按 <K>Enter</K> 键发送</li>
+            <li>AI 回答以流式方式逐字显示（打字机效果），无需等待全部生成</li>
             <li>AI 会基于知识库文档和自身知识综合回答</li>
             <li>支持多轮对话，上下文自动保持</li>
             <li>对话历史自动保存，刷新或切换页面不会丢失</li>
+            <li>回答生成中可点击 <K>停止</K> 按钮中断，已输出内容保留</li>
+          </ul>
+          <h4 style={{ marginTop: 12, fontWeight: 600 }}>EDA 工具调用</h4>
+          <ul style={{ paddingLeft: 20 }}>
+            <li>AI 可以执行 Virtuoso SKILL 代码，用于仿真、打开 cellview、查询设计数据等</li>
+            <li>示例提问：&quot;帮我执行 SKILL 代码 (plus 1 2)&quot;</li>
+            <li>工具调用过程会在对话中实时显示状态：</li>
+            <li style={{ listStyle: "none", paddingLeft: 12 }}>
+              <K>🔧 调用 execute_skill...</K> — 正在执行<br />
+              <K>✓ execute_skill: 3</K> — 执行成功，显示结果<br />
+              <K>✗ execute_skill: 错误信息</K> — 执行失败，显示原因
+            </li>
+            <li>工具执行完成后，AI 会用自然语言总结结果</li>
           </ul>
           <h4 style={{ marginTop: 12, fontWeight: 600 }}>对话导航</h4>
           <ul style={{ paddingLeft: 20 }}>

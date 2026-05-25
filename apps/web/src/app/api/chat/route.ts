@@ -1,51 +1,74 @@
-import { NextRequest } from "next/server";
+import { streamText, convertToModelMessages, tool, stepCountIs } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { z } from "zod";
 import { searchDocuments, getTotalChunks } from "@/lib/knowledge";
+import { virtuosoClient } from "@/lib/virtuoso-client";
 
-export async function POST(request: NextRequest) {
+const deepseek = createOpenAI({
+  baseURL: "https://api.deepseek.com/v1",
+  apiKey: process.env.DEEPSEEK_API_KEY ?? "",
+});
+
+export async function POST(request: Request) {
   const { messages } = await request.json();
 
-  // 取最后一条用户消息用于检索
-  const lastUserMsg = [...messages].reverse().find(
-    (m: { role: string }) => m.role === "user"
-  );
+  const modelMessages = await convertToModelMessages(messages);
 
-  // RAG 检索：如果知识库有内容，则搜索相关文档
+  // Extract last user text for RAG search
+  const lastUserMsg = [...modelMessages]
+    .reverse()
+    .find((m) => m.role === "user");
+  let lastUserText = "";
+  if (lastUserMsg) {
+    const content = lastUserMsg.content;
+    if (typeof content === "string") {
+      lastUserText = content;
+    } else if (Array.isArray(content)) {
+      for (const p of content) {
+        if (p.type === "text") {
+          lastUserText += p.text;
+        }
+      }
+    }
+  }
+
   let contextBlock = "";
-  if (getTotalChunks() > 0 && lastUserMsg) {
-    const results = await searchDocuments(lastUserMsg.content, 3);
+  if (getTotalChunks() > 0 && lastUserText) {
+    const results = await searchDocuments(lastUserText, 3);
     if (results.length > 0 && results[0].score > 0.3) {
       const docContext = results
         .map((r) => `[来源: ${r.docName}]\n${r.content}`)
         .join("\n\n---\n\n");
-      contextBlock = `\n\n以下是从知识库中检索到的相关内容，请基于这些内容回答用户问题：\n\n${docContext}\n\n如果检索内容与问题无关，请忽略并用你的知识回答。`;
+      contextBlock =
+        `\n\n以下是从知识库中检索到的相关内容：\n\n${docContext}\n\n如果检索内容与问题无关，请忽略。`;
     }
   }
 
   const systemPrompt =
     "你是 cFlow AI 助手，负责帮助半导体设计工程师管理设计流程、查询知识文档、控制仿真任务。回答简洁专业。" +
+    "\n\n你可以使用 execute_skill 工具来执行 Virtuoso SKILL 代码。当用户要求执行仿真、打开 cellview、或进行 EDA 操作时，使用此工具。" +
     contextBlock;
 
-  const response = await fetch("https://api.deepseek.com/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+  const result = streamText({
+    model: deepseek.chat("deepseek-chat"),
+    system: systemPrompt,
+    messages: modelMessages,
+    tools: {
+      execute_skill: tool({
+        description:
+          "执行 Virtuoso SKILL 代码并返回结果。用于 EDA 操作如仿真、打开 cellview、查询设计数据等。也可用于简单计算。",
+        inputSchema: z.object({
+          code: z
+            .string()
+            .describe("要执行的 SKILL 代码，如 (plus 1 2) 或 hiOpenCellView(...)"),
+        }),
+        execute: async ({ code }: { code: string }) => {
+          return await virtuosoClient().send(code);
+        },
+      }),
     },
-    body: JSON.stringify({
-      model: "deepseek-chat",
-      messages: [{ role: "system", content: systemPrompt }, ...messages],
-    }),
+    stopWhen: stepCountIs(5),
   });
 
-  if (!response.ok) {
-    return Response.json(
-      { error: `DeepSeek API 错误: ${response.status}` },
-      { status: 500 }
-    );
-  }
-
-  const data = await response.json();
-  const reply = data.choices[0].message.content;
-
-  return Response.json({ reply });
+  return result.toUIMessageStreamResponse();
 }
