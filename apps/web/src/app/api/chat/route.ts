@@ -1,8 +1,7 @@
-import { streamText, convertToModelMessages, tool, stepCountIs } from "ai";
+import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
-import { z } from "zod";
 import { searchDocuments, getTotalChunks } from "@/lib/knowledge";
-import { virtuosoClient } from "@/lib/virtuoso-client";
+import { tools as cflowTools } from "@/lib/ai-tools";
 
 const deepseek = createOpenAI({
   baseURL: "https://api.deepseek.com/v1",
@@ -45,28 +44,17 @@ export async function POST(request: Request) {
   }
 
   const systemPrompt =
-    "你是 cFlow AI 助手，负责帮助半导体设计工程师管理设计流程、查询知识文档、控制仿真任务。回答简洁专业。" +
-    "\n\n你可以使用 execute_skill 工具来执行 Virtuoso SKILL 代码。当用户要求执行仿真、打开 cellview、或进行 EDA 操作时，使用此工具。" +
+    "你是 cFlow AI 助手,负责帮助半导体设计工程师管理设计流程、查询知识文档、控制仿真任务。回答简洁专业。" +
+    "\n\n工具使用策略:" +
+    "\n- execute_skill:执行简单 SKILL 表达式" +
+    "\n- eval_python:写 Python 调 virtuoso-bridge-lite(import virtuoso_bridge),适合探索性、低频、多步操作。print() 才能看到结果" +
     contextBlock;
 
   const result = streamText({
     model: deepseek.chat("deepseek-chat"),
     system: systemPrompt,
     messages: modelMessages,
-    tools: {
-      execute_skill: tool({
-        description:
-          "执行 Virtuoso SKILL 代码并返回结果。用于 EDA 操作如仿真、打开 cellview、查询设计数据等。也可用于简单计算。",
-        inputSchema: z.object({
-          code: z
-            .string()
-            .describe("要执行的 SKILL 代码，如 (plus 1 2) 或 hiOpenCellView(...)"),
-        }),
-        execute: async ({ code }: { code: string }) => {
-          return await virtuosoClient().send(code);
-        },
-      }),
-    },
+    tools: cflowTools,
     stopWhen: stepCountIs(5),
   });
 
