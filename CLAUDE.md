@@ -142,7 +142,34 @@ cflow-next/                   monorepo (pnpm workspace)
 - EDA 通信: 所有 SKILL 调用走 `VirtuosoClient.send(skillCode, timeout)`
 - 环境变量: `VB_HOST` (default localhost), `VB_PORT` (default 65433)
 
-## 参考资料位置
+## 测试与文档约定
+
+每个含测试的 task 产出**两个文档**，都放 `D:\Workspace\gitRepo\ClaudeCodeDocs\`：
+
+1. **task 主文档** `YYYYMMDD_taskN_标题.md` — 目标 / 决策背景 / 实施清单 / 核心代码结构 /
+   测试结果**摘要表**（Tier × 结果）/ 遇到的问题 / Commit / 后续。测试只放结论表，
+   详情引用测试报告。
+2. **测试报告** `YYYYMMDD_taskN_测试报告.md` — 可复现的完整记录，供他人从零复现。
+
+**测试报告每个 Tier 必含**：
+- **目的**：这一层验证什么、为什么这么分层
+- **前置条件**：要起哪些进程（dev server / mock-daemon）、装哪些依赖、端口要求、env
+- **改动文件**：本次测试新增/修改的文件，**含临时文件**（如 `temp/` 下的测试脚本、请求体）
+- **执行命令**：每条 cmd 的**原文 1:1**（含路径、flag、重定向）
+- **真实输出**：命令的关键输出**原样粘贴**（不复述、不美化）
+- **判定**：通过/失败，以及凭什么判定（看到哪个值）
+
+**铁律——测试当下就留存输出，写报告时直接用，绝不事后重跑**：
+- 跑测试时就把 stdout/stderr 存进 `temp/`（如 `temp/tierN_*.log`），报告引用它。
+- 重跑是浪费（token/时间），且环境可能变了跑出不同结果，破坏"可复现"的可信度。
+- Tier 3 这类要起服务的，更不允许为写报告重跑。
+- 写报告 = 整理已留存的记录，不是重新执行测试。
+
+**Windows 后台进程教训**：`pnpm dev` / `pnpm mock-daemon` 起的 `next dev` / `tsx` 子进程，
+TaskStop 杀不掉（只杀 pnpm 父进程）。收尾必须 `netstat -ano | grep :PORT` 查 PID 再
+`taskkill //PID <pid> //F`，否则遗留进程占端口导致下次启动失败。
+
+
 
 | 内容 | 路径 |
 |------|------|
