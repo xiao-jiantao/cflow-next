@@ -52,6 +52,21 @@ function evalSkill(skill: string): string {
   const lispPlus = code.match(/^\(plus\s+(-?\d+)\s+(-?\d+)\)$/);
   if (lispPlus) return String(Number(lispPlus[1]) + Number(lispPlus[2]));
 
+  // fetch()/fetch_one() emit `mapcar(lambda((o) list(o~>f1 o~>f2 ...)) <expr>)`.
+  // Return a canned list-of-rows sized to the slot count so the demo works for
+  // any fields. Two sample rows; each cell is a quoted "<field>_<rowIdx>".
+  if (code.startsWith("mapcar(")) {
+    const fields = [...code.matchAll(/o~>(\w+)/g)].map((m) => m[1]);
+    const ncols = fields.length || 1;
+    const rows = [0, 1].map((r) => {
+      const cells = Array.from({ length: ncols }, (_, c) =>
+        `"${fields[c] ?? `col${c}`}_${r}"`,
+      ).join(" ");
+      return `(${cells})`;
+    });
+    return `(${rows.join(" ")})`;
+  }
+
   // Default: echo SKILL back so caller can confirm transport works.
   return `echo: ${code}`;
 }

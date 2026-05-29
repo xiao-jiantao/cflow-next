@@ -2,6 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { virtuosoClient } from "@/lib/virtuoso-client";
 import { evalPython } from "./eval-python";
+import { fetch as fetchTool, fetchOne } from "./atomic";
 
 // 通路 A:eval_python — LLM 自由写 Python 调用 virtuoso-bridge-lite
 // 通路 B:预注册原子 tool — 薄包装,高频/确定性/省 token
@@ -24,6 +25,8 @@ const executeSkill = tool({
 export const tools = {
   execute_skill: executeSkill,
   eval_python: evalPython,
-  // TODO Phase 2: ...atomic (fetch, fetch_one, load_il, dismiss_dialog)
+  fetch: fetchTool,
+  fetch_one: fetchOne,
+  // TODO Phase 2: ...atomic (load_il, dismiss_dialog — 需 SSH 底座)
   // TODO Phase 3: ...workflows
 };
