@@ -169,7 +169,47 @@ cflow-next/                   monorepo (pnpm workspace)
 TaskStop 杀不掉（只杀 pnpm 父进程）。收尾必须 `netstat -ano | grep :PORT` 查 PID 再
 `taskkill //PID <pid> //F`，否则遗留进程占端口导致下次启动失败。
 
+## 日报约定
 
+每天产出一份日报 `D:\Workspace\gitRepo\ClaudeCodeDocs\YYYY.MM.DD_日报.md`。
+
+**不读昨天日报**：日报内容从**当天的 task 文档 + conversation-log** 拼装，不靠读前一份
+日报对齐格式（读旧日报是 token 浪费）。格式照本节模板即可。
+
+**固定结构**：
+1. `# YYYY.MM.DD 日报`
+2. `## 今日主题` — 一两句话点出主线
+3. `## 主要工作与结论` — 按 task / 主题分小节，每节：问题 → 分析 → 结论/⚑决策。
+   表格、代码、ASCII 图 1:1 保留（同 conversation-log 规则）
+4. `## 今日产出文件` — 表格：文件路径 | 内容
+5. `## 明日计划` — 表格或清单，标出依赖与优先级
+6. `## 备注` — 遗留问题、安全提醒、未推送 commit 等
+
+**何时写**：用户说"写日报"时写；一天多次可增量补充同一份。
+
+## Session 与 token 约定
+
+**核心原则：一个 task 一个 session，做完即归档后开新 session。** 这是省 token 最有效的
+一条——长 session 是 token 黑洞：每多一轮，整段历史（所有代码、工具输出、讨论）都要重新
+计入下一轮输入，越往后每轮越贵。项目初期"少 token 写很多代码"不是代码变便宜，是 session
+短。task 文档 + conversation-log 就是为了让用户能安全开新 session 而不丢上下文。
+
+**用户侧**：一个 task 做完、或话题切换时，新开 session。旧 session 的成果已落进 task 文档
+/ 测试报告 / conversation-log，不丢。
+
+**我（assistant）侧的固定动作**：新建 session 只有用户能做，我做不到。所以每当一个 task
+完成且已归档（task 文档 / 测试报告 / 日报 / conversation-log 都落盘），**我必须主动提示
+用户"现在是开新 session 的好时机"**，并先确认该存的都已存好（用户开新 session 不丢上下文）。
+这是固定动作，不靠临场想起。
+
+**我（assistant）侧的 token 纪律**（违反过，要真做到）：
+- **同一文件只读一次**：读过的内容记住，不要 Read 全文 + cat + sed + 多次 offset 重复拉同一文件进上下文。
+- **大文件局部读**：用 Grep / Read offset+limit 取需要的行，不全量读（曾为对齐格式读 259 行旧日报，纯浪费）。
+- **不盲目大并行**：一次甩十几个调用，有依赖会互相取消，且取消的已跑部分照样计费、照样重复输出。
+- **调试 dump 写文件再 grep**：大输出存 `temp/`，只 grep 关键行，不整段进上下文。
+- **少返工**：想清楚再动手——序号、漏写、误删这类"做错→被指出→修"的循环，每次都把上下文再过一遍。
+
+## 参考资料位置
 
 | 内容 | 路径 |
 |------|------|

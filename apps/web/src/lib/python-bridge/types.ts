@@ -6,6 +6,14 @@ export interface PythonRunnerOptions {
   env?: Record<string, string>;
 }
 
+export interface PythonWorkerOptions {
+  pythonPath?: string;
+  workerScriptPath?: string;
+  timeoutMs?: number;
+  maxOutputBytes?: number;
+  env?: Record<string, string>;
+}
+
 export interface PythonResult {
   ok: boolean;
   stdout: string;

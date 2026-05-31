@@ -1,2 +1,3 @@
 export { PythonRunner, pythonRunner } from "./runner";
-export type { PythonResult, PythonRunnerOptions } from "./types";
+export { PythonWorker, pythonWorker } from "./worker";
+export type { PythonResult, PythonRunnerOptions, PythonWorkerOptions } from "./types";

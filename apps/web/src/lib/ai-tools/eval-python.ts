@@ -1,12 +1,12 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { pythonRunner } from "@/lib/python-bridge";
+import { pythonWorker } from "@/lib/python-bridge";
 
 export const evalPython = tool({
   description:
     "执行一段 Python 代码,可 import virtuoso_bridge 调用 113 个 EDA API + A 类控制面方法。" +
     "适合探索性、低频、未预注册的操作。返回 stdout/stderr。" +
-    "提示:print() 才能看到结果;脚本运行在隔离子进程,共享状态需走 SSH/TCP。",
+    "提示:print() 才能看到结果;脚本运行在常驻 worker 的隔离命名空间,跨调用不保留变量,共享状态需走 SSH/TCP。",
   inputSchema: z.object({
     code: z
       .string()
@@ -25,8 +25,10 @@ export const evalPython = tool({
       .describe("超时秒数,默认 30"),
   }),
   execute: async ({ code, timeoutSec }) => {
-    const runner = pythonRunner();
-    const result = await runner.run(code);
+    const worker = pythonWorker();
+    const result = await worker.run(code, {
+      timeoutMs: timeoutSec ? timeoutSec * 1000 : undefined,
+    });
     return {
       ok: result.ok,
       stdout: result.stdout,
