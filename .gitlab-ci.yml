@@ -1,0 +1,19 @@
+# cflow-next GitLab CI/CD — 自动部署到目标 Linux
+# Runner 装在目标机器上，每次 push master 自动拉代码、构建、重启
+
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  tags:
+    - cflow-next          # 只匹配打了这个 tag 的 Runner
+  only:
+    - master              # 只在 push master 时触发
+  script:
+    # 1. 安装/更新依赖
+    - pnpm install
+    # 2. 构建
+    - pnpm build
+    # 3. 启动或重启服务（pm2 守护进程）
+    - pm2 restart cflow-next || pm2 start pnpm --name cflow-next -- start
