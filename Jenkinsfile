@@ -30,7 +30,7 @@ pipeline {
     DEPLOY_SSH_CRED = 'deploy-ssh'                       // 上面配的 SSH 凭据 ID
     APP_NAME       = 'cflow-next'
     APP_PORT       = '3000'
-    PM2            = '/home/cha00180/.cflow-tools/bin/pm2'        // 部署机上 pm2 的位置（由本流水线安装）
+    PM2            = '/home/cha00180/.cflow-tools/node_modules/pm2/bin/pm2'        // 部署机上 pm2 的位置（由本流水线安装）
   }
 
   options {
