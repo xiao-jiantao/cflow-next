@@ -11,6 +11,11 @@
 pipeline {
   agent any
 
+   // 引用你在“全局工具配置”中设置的 Node.js 安装名称
+    tools {
+        nodejs 'nodeJS'   // 这里的名字必须和全局工具配置中的完全一致
+    }
+
   // ── webhook 触发：GitLab push 事件来时自动跑 ──
   // 需配合 GitLab 插件；另需在 GitLab 项目 Settings→Webhooks 填 Jenkins 的 webhook URL。
   triggers {
