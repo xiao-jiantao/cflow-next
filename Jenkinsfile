@@ -113,12 +113,12 @@ pipeline {
             $SSH "cd $DEPLOY_DIR && rm -rf apps node_modules package.json && tar -xzf cflow-next.tar.gz && rm -f cflow-next.tar.gz"
 
             # 4) 远程安装 pm2（没有才装，幂等）
-            $SSH "command -v $PM2 >/dev/null 2>&1 || (cd \\$DEPLOY_HOME/.cflow-tools && tar -xzf pm2-offline.tar.gz && rm -f pm2-offline.tar.gz)"
+            $SSH "command -v $PM2 >/dev/null 2>&1 || (cd $DEPLOY_HOME/.cflow-tools && tar -xzf pm2-offline.tar.gz && rm -f pm2-offline.tar.gz)"
 
             # 5) 启动/重启服务
             #    环境变量从部署机上的 ~/.cflow-next.env 读取（含 DEEPSEEK_API_KEY 等，由你维护，不进 git）
             $SSH "cd $DEPLOY_DIR && \\
-              set -a && [ -f \\$DEPLOY_HOME/.cflow-next.env ] && . \\$DEPLOY_HOME/.cflow-next.env; set +a; \\
+              set -a && [ -f $DEPLOY_HOME/.cflow-next.env ] && . $DEPLOY_HOME/.cflow-next.env; set +a; \\
               export PORT=$APP_PORT; \\
               ($PM2 restart $APP_NAME --update-env || $PM2 start apps/web/server.js --name $APP_NAME --update-env)"
 
