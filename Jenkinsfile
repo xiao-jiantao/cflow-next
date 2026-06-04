@@ -26,11 +26,11 @@ pipeline {
     DEPLOY_HOST    = '10.1.62.55'
     DEPLOY_USER    = 'cha00180'
     DEPLOY_HOME    = '/home/cha00180'
-    DEPLOY_DIR     = '$DEPLOY_HOME/apps/cflow-next'   // 部署机上的目标目录
+    DEPLOY_DIR     = '/home/cha00180/apps/cflow-next'   // 部署机上的目标目录
     DEPLOY_SSH_CRED = 'deploy-ssh'                       // 上面配的 SSH 凭据 ID
     APP_NAME       = 'cflow-next'
     APP_PORT       = '3000'
-    PM2            = '$DEPLOY_HOME/.cflow-tools/bin/pm2'        // 部署机上 pm2 的位置（由本流水线安装）
+    PM2            = '/home/cha00180/.cflow-tools/bin/pm2'        // 部署机上 pm2 的位置（由本流水线安装）
   }
 
   options {
