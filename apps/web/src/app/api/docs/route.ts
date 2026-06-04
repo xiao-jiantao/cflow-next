@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
 import { writeFileSync, mkdirSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File | null;
 
     if (!file) {
-      return Response.json({ error: "未上传文件" }, { status: 400 });
+      return NextResponse.json({ error: "未上传文件" }, { status: 400 });
     }
 
     // 保存上传文件到系统临时目录（避免占用问题）
