@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       });
     } catch {
       tryDelete(tmpPath);
-      return Response.json(
+      return NextResponse.json(
         { error: "文档转换失败，请检查文件格式" },
         { status: 500 }
       );
@@ -56,29 +56,29 @@ export async function POST(request: NextRequest) {
     // 向量化索引
     await indexDocument(mdName, mdContent);
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       name: mdName,
       chunks: mdContent.length,
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "未知错误";
-    return Response.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
 export async function GET() {
   const docs = getIndexedDocs();
-  return Response.json({ docs });
+  return NextResponse.json({ docs });
 }
 
 export async function DELETE(request: NextRequest) {
   const { name } = await request.json();
   if (!name) {
-    return Response.json({ error: "缺少文档名称" }, { status: 400 });
+    return NextResponse.json({ error: "缺少文档名称" }, { status: 400 });
   }
   removeDocument(name);
   const mdPath = path.join(DOCS_DIR, name);
   tryDelete(mdPath);
-  return Response.json({ success: true });
+  return NextResponse.json({ success: true });
 }
