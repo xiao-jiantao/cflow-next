@@ -46,6 +46,8 @@ pipeline {
 
     stage('安装依赖') {
       steps {
+        sh 'npm -v'   // Jenkins 有外网、有 pnpm
+        sh 'npm install -g pnpm'
         sh 'pnpm install --frozen-lockfile'   // Jenkins 有外网、有 pnpm
       }
     }
