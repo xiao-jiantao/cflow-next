@@ -3,10 +3,15 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { searchDocuments, getTotalChunks } from "@/lib/knowledge";
 import { tools as cflowTools } from "@/lib/ai-tools";
 
+// API 端点/密钥/模型全部走环境变量,本地与内网各填一套 .env.local:
+//   本地调试 → DeepSeek 官方(默认值),个人 token,模型 deepseek-chat
+//   内网部署 → 公司网关 OpenAI 入口(DEEPSEEK_BASE_URL=http://deepseek.chsemi.com/v1),
+//             公司 token,模型 deepseek-v4-pro
 const deepseek = createOpenAI({
-  baseURL: "https://api.deepseek.com/v1",
+  baseURL: process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com/v1",
   apiKey: process.env.DEEPSEEK_API_KEY ?? "",
 });
+const chatModel = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
 
 export async function POST(request: Request) {
   const { messages } = await request.json();
@@ -71,7 +76,7 @@ export async function POST(request: Request) {
     contextBlock;
 
   const result = streamText({
-    model: deepseek.chat("deepseek-chat"),
+    model: deepseek.chat(chatModel),
     system: systemPrompt,
     messages: modelMessages,
     tools: cflowTools,
