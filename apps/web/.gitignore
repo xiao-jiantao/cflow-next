@@ -30,8 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (含密钥,绝不进仓库;每台机各自维护)
+.env
 .env.local
+.env.*local
+.env.edalocal
 
 # vercel
 .vercel

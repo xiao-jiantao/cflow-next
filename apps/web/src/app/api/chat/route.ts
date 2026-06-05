@@ -2,13 +2,11 @@ import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { searchDocuments, getTotalChunks } from "@/lib/knowledge";
 import { tools as cflowTools } from "@/lib/ai-tools";
-import { config } from "dotenv";
-config({ path: ".env.edalocal" }); // 加载环境变量
 
-// API 端点/密钥/模型全部走环境变量,本地与内网各填一套 .env.local:
-//   本地调试 → DeepSeek 官方(默认值),个人 token,模型 deepseek-chat
-//   内网部署 → 公司网关 OpenAI 入口(DEEPSEEK_BASE_URL=http://deepseek.chsemi.com/v1),
-//             公司 token,模型 deepseek-v4-pro
+// API 端点/密钥/模型全部走环境变量,本地与内网各注入一套:
+//   本地调试 → apps/web/.env.local(Next 自动读),个人 token,模型 deepseek-chat
+//   内网部署 → 生产机 ~/.cflow-next.env,由 Jenkinsfile 在 pm2 启动前 source 并
+//             --update-env 注入(公司网关 /v1,公司 token,模型 deepseek-v4-pro)
 const deepseek = createOpenAI({
   baseURL: process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com/v1",
   apiKey: process.env.DEEPSEEK_API_KEY ?? "",
