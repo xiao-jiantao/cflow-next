@@ -3,7 +3,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { searchDocuments, getTotalChunks } from "@/lib/knowledge";
 import { tools as cflowTools } from "@/lib/ai-tools";
 import { config } from "dotenv";
-config({ path: ".env.local" }); // 加载环境变量
+config({ path: ".env.edalocal" }); // 加载环境变量
 
 // API 端点/密钥/模型全部走环境变量,本地与内网各填一套 .env.local:
 //   本地调试 → DeepSeek 官方(默认值),个人 token,模型 deepseek-chat
