@@ -38,13 +38,22 @@ export async function POST(request: Request) {
 
   let contextBlock = "";
   if (getTotalChunks() > 0 && lastUserText) {
-    const results = await searchDocuments(lastUserText, 3);
-    if (results.length > 0 && results[0].score > 0.3) {
-      const docContext = results
-        .map((r) => `[来源: ${r.docName}]\n${r.content}`)
-        .join("\n\n---\n\n");
-      contextBlock =
-        `\n\n以下是从知识库中检索到的相关内容：\n\n${docContext}\n\n如果检索内容与问题无关，请忽略。`;
+    try {
+      const results = await searchDocuments(lastUserText, 3);
+      if (results.length > 0 && results[0].score > 0.3) {
+        const docContext = results
+          .map((r) => `[来源: ${r.docName}]\n${r.content}`)
+          .join("\n\n---\n\n");
+        contextBlock =
+          `\n\n以下是从知识库中检索到的相关内容：\n\n${docContext}\n\n如果检索内容与问题无关，请忽略。`;
+      }
+    } catch (err) {
+      // embedding 服务不可达(如内网无公网连不到 api.siliconflow.cn)→
+      // 跳过 RAG,不阻断对话。将来内网部署可达的 embedding 服务即自动恢复。
+      console.warn(
+        "RAG 检索失败,跳过知识库增强:",
+        err instanceof Error ? err.message : err,
+      );
     }
   }
 
