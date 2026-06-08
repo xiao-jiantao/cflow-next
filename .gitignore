@@ -9,7 +9,6 @@ dist
 .DS_Store
 .codegraph/
 
-# RAG 知识库:文档源(.md/.pdf)进 git 随 Jenkins 部署;
-# 向量缓存 vectors.json 不进 git(35MB,生产机首次索引时用内网 embedding 现场生成)
-docs/vectors.json
+# RAG 知识库:文档源 + 向量缓存都进 git 随 Jenkins 部署
+# (生产机 scp 不通,vectors.json 35MB 经 git 带过去;模型一致可直接用,免重新索引)
 
