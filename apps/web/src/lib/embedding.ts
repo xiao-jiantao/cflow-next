@@ -1,4 +1,9 @@
-const SILICONFLOW_API_URL = "https://api.siliconflow.cn/v1/embeddings";
+// embedding 端点走环境变量,本地与内网各注入一套:
+//   本地 → 默认公网官方 https://api.siliconflow.cn/v1/embeddings
+//   内网 → 公司 nginx 反代 http://siliconflow.chsemi.com/v1/embeddings
+//          (内网无公网,网管用 nginx 把公网 siliconflow 反代成内网 http 域名)
+const SILICONFLOW_API_URL =
+  process.env.SILICONFLOW_BASE_URL ?? "https://api.siliconflow.cn/v1/embeddings";
 const EMBEDDING_MODEL = "Qwen/Qwen3-Embedding-8B";
 
 export async function getEmbedding(texts: string[]): Promise<number[][]> {
